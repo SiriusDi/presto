@@ -1,0 +1,24 @@
+name: Docker Image Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: 'release-0.296'
+        submodules: 'true'
+    - name: Build the Docker image
+      run: |
+        cd presto-native-execution
+        git submodule sync --recursive
+        git submodule update --init --recursive
+        sed -i '/centos-native-runtime:/,/^[^ ]/ s/\(EXTRA_CMAKE_FLAGS=.*\)\(-DPRESTO_ENABLE_CUDF=\${GPU:-OFF}\)/\1\2 -DPRESTO_ENABLE_HDFS=ON/' docker-compose.yml
+        docker compose build centos-native-dependency
+        docker compose build --build-arg BUILD_TYPE=Release centos-native-runtime
