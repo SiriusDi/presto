@@ -9,8 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
-    - uses: actions/checkout@v6
+    - name: checkout
+      uses: actions/checkout@v6
       with:
         ref: 'release-0.296'
         submodules: 'true'
@@ -20,5 +26,8 @@ jobs:
         git submodule sync --recursive
         git submodule update --init --recursive
         sed -i '/centos-native-runtime:/,/^[^ ]/ s/\(EXTRA_CMAKE_FLAGS=.*\)\(-DPRESTO_ENABLE_CUDF=\${GPU:-OFF}\)/\1\2 -DPRESTO_ENABLE_HDFS=ON/' docker-compose.yml
+        docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
         docker compose build centos-native-dependency
         docker compose build --build-arg BUILD_TYPE=Release centos-native-runtime
+        docker tag presto/prestissimo-runtime:centos9 ghcr.io/${{ github.actor }}/prestissimo-runtime:centos9
+        docker push ghcr.io/${{ github.actor }}/prestissimo-runtime:centos9
